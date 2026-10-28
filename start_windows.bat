@@ -1,22 +1,46 @@
 @echo off
-chcp 65001 >nul
+setlocal
 cd /d "%~dp0"
+if errorlevel 1 goto failed
+
+echo Mercado AI Studio - Windows launcher
+echo Please keep this window open.
 where py >nul 2>nul
-if errorlevel 1 (
-  echo 请先安装 Python 3.11 或 3.12，并勾选 Add Python to PATH。
-  pause
-  exit /b 1
-)
-if not exist .venv\Scripts\python.exe (
-  py -3 -m venv .venv
-  if errorlevel 1 goto failed
-)
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+if errorlevel 1 goto use_python
+set "STUDIO_PYTHON=py -3"
+goto check_python
+
+:use_python
+where python >nul 2>nul
+if errorlevel 1 goto missing_python
+set "STUDIO_PYTHON=python"
+
+:check_python
+%STUDIO_PYTHON% --version
+if errorlevel 1 goto missing_python
+if exist ".venv\Scripts\python.exe" goto install
+%STUDIO_PYTHON% -m venv .venv
 if errorlevel 1 goto failed
-.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
+
+:install
+".venv\Scripts\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 goto failed
-exit /b 0
+".venv\Scripts\python.exe" -m streamlit run app.py --server.address 127.0.0.1
+if errorlevel 1 goto failed
+goto finished
+
+:missing_python
+echo Python was not found. Install Python 3.12 from python.org.
+echo Enable "Add Python to PATH", then reopen this launcher.
+goto failed
+
 :failed
-echo 启动失败。请检查上方错误、网络或 Python 版本。
+echo.
+echo Startup failed. Please send a screenshot of this window.
 pause
 exit /b 1
+
+:finished
+echo Application stopped.
+pause
+exit /b 0
